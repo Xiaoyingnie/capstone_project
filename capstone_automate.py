@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import pandas as pd
 import numpy as np
 import warnings 
@@ -18,22 +15,19 @@ from sklearn.metrics import pairwise_distances
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from scipy.stats import entropy
 from wordcloud import WordCloud
-
+import matplotlib.pyplot as plt
+import os
+from wordcloud import STOPWORDS
+from scipy.spatial.distance import squareform
+import scipy.cluster.hierarchy as sch
+from scipy.spatial.distance import pdist
 warnings.filterwarnings('ignore')
-
-
-# In[3]:
-
 
 def load_data(file_path):
     return pd.read_csv(file_path)
 
 
 # EDA
-
-# In[5]:
-
-
 def explore_data(df):
     """Prints dataset information and basic statistics."""
     print("Shape of dataset:", df.shape)
@@ -42,9 +36,6 @@ def explore_data(df):
     df.info()
     print("\nSummary Statistics:\n", df.describe())
     print("\nSummary of Null value:",df.isnull().sum())
-
-
-# In[7]:
 
 
 def get_unique_values(df, column_name):
@@ -60,16 +51,10 @@ def count_unique_values(df, column_name):
     return unique_count
 
 
-# In[9]:
-
-
 def extract_rater_demographics(df, demographic_fields):
     """Extracts unique raters with their demographic information."""
     rater_demographics = df[demographic_fields].drop_duplicates(subset=['rater_id'])
     return rater_demographics.iloc[:, 1:]
-
-
-# In[11]:
 
 
 def merge_demographics(clustered_df, original_df, demographic_fields):
@@ -82,10 +67,6 @@ def merge_demographics(clustered_df, original_df, demographic_fields):
 
 
 # KModes Clustering based on raters demographics
-
-# In[14]:
-
-
 def perform_kmodes_clustering(df, max_k=15):
     """Performs KModes clustering and determines the optimal number of clusters using the Elbow method."""
     categorical_data = df.astype(str)
@@ -111,9 +92,6 @@ def perform_kmodes_clustering(df, max_k=15):
     plt.show()
 
 
-# In[16]:
-
-
 def apply_kmodes_clustering(df, num_clusters=6):
     """Applies KModes clustering on the categorical dataset."""
     categorical_data = df.astype(str)
@@ -121,9 +99,6 @@ def apply_kmodes_clustering(df, num_clusters=6):
     labels = kmodes.fit_predict(categorical_data)
     categorical_data['Cluster'] = labels
     return categorical_data
-
-
-# In[18]:
 
 
 def visualize_cluster_counts(df):
@@ -140,9 +115,6 @@ def visualize_cluster_counts(df):
 
     plt.savefig("cluster_counts_kmodes_demographics.pdf", format="pdf", bbox_inches="tight")
     plt.show()
-
-
-# In[20]:
 
 
 def visualize_categorical_distribution(df):
@@ -163,9 +135,6 @@ def visualize_categorical_distribution(df):
         plt.show()
 
 
-# In[22]:
-
-
 def compute_within_demographic_cluster_disagreement(clustered_df):
     """Compute entropy for each question within each demographic cluster."""
     question_cols = [col for col in clustered_df.columns if "_Q" in col]
@@ -183,9 +152,6 @@ def compute_within_demographic_cluster_disagreement(clustered_df):
     return pd.concat(results, ignore_index=True)
 
 
-# In[24]:
-
-
 def visualize_demographic_disagreement(entropy_df):
     """Visualize entropy (disagreement) across demographic clusters."""
     plt.figure(figsize=(10, 6))
@@ -194,9 +160,6 @@ def visualize_demographic_disagreement(entropy_df):
     plt.ylabel("Disagreement (Entropy)")
     plt.title("Variation in Rating Behaviors Within Demographic Clusters")
     plt.show()
-
-
-# In[26]:
 
 
 if __name__ == "__main__":
@@ -218,23 +181,12 @@ if __name__ == "__main__":
 
 # Entropy is a measure of uncertainty or disorder in a system. If all raters in a cluster agree on a response, entropy is low ( closer
 # to 0 ). If raters in a cluster have diverse opinions, entropy is high. Using Entropy for Disagreement Analysis
-# 
 # Answers are categorical, variance is not appropriate.
-# 
 # ANOVA (Analysis of Variance) compares mean values which does not apply to categorical data.
-# 
-# Entropy measures the loevel of disagreement.
-# 
+# Entropy measures the level of disagreement.
 # Within-Cluster Disagreement: 
 # For each item compute ave entropy over all questions
 # For each cluster, rank items in order of decreasing average entropy reduction in cluster. Take top-ten (or twenty) items in each cluster 
-# Print conversations
-# Print wordcloud
-# 
-# 
-# Across-Cluster Disagreement: Compute entropy for each question across all clsuters
-
-# In[30]:
 
 
 # Compute Within-Cluster Disagreement
@@ -244,9 +196,6 @@ def compute_entropy(series):
     value_counts = series.value_counts(normalize=True)
     # Compute entropy
     return entropy(value_counts, base=2)  
-
-
-# In[36]:
 
 
 question_columns = [
@@ -267,9 +216,6 @@ question_columns = [
     'Q2_harmful_content_overall', 'Q3_bias_overall',
     'Q6_policy_guidelines_overall', 'Q_overall'
 ]
-
-
-# In[52]:
 
 
 def compute_entropy(series):
@@ -299,7 +245,8 @@ def compute_global_entropy(df):
         global_entropy[item_id] = item_entropy_values.mean()
 
     return pd.Series(global_entropy, name="Global_Entropy")
-    
+
+
 def compute_within_cluster_disagreement(clustered_df, baseline_df):
     """Compute entropy reduction within each cluster and return the top 10 most disagreed items for each cluster."""
     clustered_df = clustered_df.copy()
@@ -351,16 +298,6 @@ def get_top_items_per_cluster(final_df, top_n=3):
         lambda x: x.nlargest(top_n, "Entropy_Reduction")
     ).reset_index(drop=True)
     return top_items
-
-
-# In[54]:
-
-
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
-import os
-from wordcloud import STOPWORDS
-
 
 # Customize stopwords
 custom_stopwords = STOPWORDS.union({"USER", "LAMDA"})
@@ -642,9 +579,6 @@ def generate_wordclouds_per_cluster(df, text_type="context"):
         print(f"WordCloud saved: {base_filename}.png")
 
 
-# In[64]:
-
-
 def compute_entropy(series):
     """Compute entropy of a categorical variable."""
     value_counts = series.value_counts(normalize=True)
@@ -672,7 +606,8 @@ def compute_global_entropy(df):
         global_entropy[item_id] = item_entropy_values.mean()
 
     return pd.Series(global_entropy, name="Global_Entropy")
-    
+
+
 def compute_within_cluster_disagreement(clustered_df, baseline_df):
     """
     Compute entropy reduction within each cluster and return the 
@@ -727,14 +662,7 @@ def get_top_items_per_cluster(final_df, top_n=10):
     return top_items
 
 
-
-# In[66]:
-
-
 get_ipython().system('conda install -c conda-forge hdbscan -y')
-
-
-# In[68]:
 
 
 import hdbscan
@@ -742,13 +670,9 @@ print("HDBSCAN successfully imported!")
 
 
 # PCA assumes continuous, Gaussian-distributed features — not ideal for categorical values like -1/0/1.
-
-# In[72]:
-
-
-from sklearn.metrics import pairwise_distances
 # Customize stopwords
 custom_stopwords = STOPWORDS.union({"USER", "LAMDA"})
+
 
 def find_optimal_eps(df, min_samples=10):
     """Finds the optimal eps value for DBSCAN using the k-distance method."""
@@ -777,6 +701,7 @@ def apply_hdbscan(df, min_cluster_size=5, min_samples=5):
     clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
     df['Cluster'] = clusterer.fit_predict(df)
     return df
+
 
 def visualize_hdbscan_clusters(df, output_path="hdbscan_cluster_counts.png"):
     """Visualizes the count of records in each HDBSCAN cluster."""
@@ -969,12 +894,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-
 # K-Modes
-
-# In[74]:
-
-
 # Customize stopwords
 custom_stopwords = STOPWORDS.union({"USER", "LAMDA"})
 
@@ -1010,12 +930,8 @@ def visualize_kmodes_clusters(df, output_path="kmodes_cluster_counts.pdf"):
     plt.close()
 
 
-# In[76]:
-
-
 def visualize_kmodes_demographics(df, demographic_features, output_dir="demographic_plots_kmodes"):
     """Visualizes how each demographic category is distributed across KModes clusters and saves the plots."""
-    import os
     os.makedirs(output_dir, exist_ok=True)
     sns.set(style="white")
 
@@ -1058,9 +974,6 @@ def visualize_kmodes_demographics(df, demographic_features, output_dir="demograp
         # Save as PDF
         plt.savefig(f"{output_dir}/{feature}_kmodes_distribution.pdf", format="pdf", bbox_inches="tight")
         plt.close()
-
-
-# In[68]:
 
 
 def generate_wordclouds_per_cluster(df, entropy_df, text_type="context"):
@@ -1112,13 +1025,6 @@ def generate_wordclouds_per_cluster(df, entropy_df, text_type="context"):
 
         print(f"WordCloud saved: {base_filename}.pdf")
 
-
-# In[78]:
-
-
-from kmodes.kmodes import KModes
-from sklearn.metrics import pairwise_distances
-import matplotlib.pyplot as plt
 
 def main():
     file_path = "Desktop/cs-rit/last_term/capstone/pythonProject/diverse_safety_adversarial_dialog_350.csv"
@@ -1196,10 +1102,6 @@ if __name__ == "__main__":
 
 
 # Hierarchical Clustering (cluster raters based on raters' response)
-
-# In[94]:
-
-
 custom_stopwords = STOPWORDS.union({"USER", "LAMDA"})
 def visualize_hierarchical_clusters(df, output_path="hierarchical_cluster_counts.pdf"):
     """Visualizes the count of records in each hierarchical cluster."""
@@ -1231,9 +1133,6 @@ def visualize_hierarchical_clusters(df, output_path="hierarchical_cluster_counts
     plt.tight_layout()
     plt.savefig(output_path, format="pdf", bbox_inches="tight", dpi=300)
     plt.close()
-
-
-# In[96]:
 
 
 def visualize_hierarchical_demographics(df, demographic_features, output_dir="demographic_plots_hierarchical"):
@@ -1281,9 +1180,6 @@ def visualize_hierarchical_demographics(df, demographic_features, output_dir="de
         # Save as PDF
         plt.savefig(f"{output_dir}/{feature}_hierarchical_distribution.pdf", format="pdf", bbox_inches="tight")
         plt.close()
-
-
-# In[98]:
 
 
 def generate_wordclouds_per_cluster(df, entropy_df, text_type="context"):
@@ -1335,18 +1231,6 @@ def generate_wordclouds_per_cluster(df, entropy_df, text_type="context"):
 
         print(f"WordCloud saved: {base_filename}.pdf")
 
-
-# In[106]:
-
-
-from scipy.spatial.distance import squareform
-from scipy.cluster.hierarchy import fcluster, linkage, dendrogram
-from sklearn.metrics import pairwise_distances
-import scipy.cluster.hierarchy as sch
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-from scipy.spatial.distance import pdist
 
 def apply_hierarchical_clustering(df, num_clusters=3):
     """Applies hierarchical clustering using Hamming distance and average linkage."""
@@ -1461,8 +1345,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-# In[ ]:
 
 
 
