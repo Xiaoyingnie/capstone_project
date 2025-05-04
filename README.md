@@ -26,3 +26,10 @@ safety evaluations?
 - **Disagreement Quantification**: Entropy-based metrics for variance  
 - **Word Cloud Generation**: For top agreed/disagreed contexts and model responses  
 - **PDF/CSV Outputs**: Plots and tables saved for reporting
+
+
+## How to Run
+- Clone this repository
+- install required packages
+- prepare the dataset (diverse_safety_adversarial_dialog_350.csv)
+- run the script
